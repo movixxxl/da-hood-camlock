@@ -1,0 +1,115 @@
+--// LOCK BUTTON + LARGER CENTER AREA + CINEMATIC CAMERA + ROUND BUTTON + OWNER TEXT ONCE
+--// LocalScript inside StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+--== CREATE UI ==
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LockButtonGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local Button = Instance.new("TextButton")
+Button.Name = "LockButton"
+Button.Size = UDim2.new(0, 150, 0, 50)
+Button.Position = UDim2.new(0.45, 0, 0.8, 0)
+Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button.Font = Enum.Font.GothamBold
+Button.TextSize = 18
+Button.Text = "Lock Target"
+Button.Active = true
+Button.Draggable = true
+Button.Parent = ScreenGui
+
+--== MAKE BUTTON ROUND ==
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0.5, 0)
+UICorner.Parent = Button
+
+--== LOCK VARIABLES ==
+local lockedPlayer = nil
+local lockEnabled = false
+local lockAreaSize = Vector2.new(400, 400) -- Width x Height of center lock area
+local ownerTextShown = false -- Flag to show owner text only once
+
+--== FUNCTION TO GET PLAYER IN CENTER AREA ==
+local function getPlayerInCenterArea()
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local closestPlayer = nil
+    local closestDistance = math.huge
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local screenPos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            if onScreen then
+                local offset = (Vector2.new(screenPos.X, screenPos.Y) - center)
+                if math.abs(offset.X) <= lockAreaSize.X/2 and math.abs(offset.Y) <= lockAreaSize.Y/2 then
+                    local dist = offset.Magnitude
+                    if dist < closestDistance then
+                        closestDistance = dist
+                        closestPlayer = player
+                    end
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+--== FUNCTION TO SHOW OWNER TEXT ONCE ==
+local function showOwnerTextOnce()
+    if ownerTextShown then return end
+    ownerTextShown = true
+
+    local ownerLabel = Instance.new("TextLabel")
+    ownerLabel.Size = UDim2.new(1, 0, 0, 50)
+    ownerLabel.Position = UDim2.new(0, 0, 0.05, 0)
+    ownerLabel.BackgroundTransparency = 1
+    ownerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ownerLabel.Font = Enum.Font.GothamBold
+    ownerLabel.TextScaled = true
+    ownerLabel.Text = "owner: movix"
+    ownerLabel.Parent = ScreenGui
+
+    task.delay(4, function()
+        ownerLabel:Destroy()
+    end)
+end
+
+--== BUTTON CLICK TO LOCK/UNLOCK ==
+Button.MouseButton1Click:Connect(function()
+    if lockEnabled then
+        lockEnabled = false
+        lockedPlayer = nil
+        Button.Text = "Lock Target"
+        return
+    end
+
+    local target = getPlayerInCenterArea()
+    if target then
+        lockedPlayer = target
+        lockEnabled = true
+        Button.Text = "Locked: " .. target.Name
+
+        -- Show owner text only the first time
+        showOwnerTextOnce()
+    else
+        Button.Text = "No Player in Center Area"
+    end
+end)
+
+--== CAMERA FOLLOW ==
+RunService.RenderStepped:Connect(function()
+    if lockEnabled and lockedPlayer and lockedPlayer.Character and lockedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        Camera.CFrame = CFrame.lookAt(
+            Camera.CFrame.Position,
+            lockedPlayer.Character.HumanoidRootPart.Position
+        )
+    end
+end)
