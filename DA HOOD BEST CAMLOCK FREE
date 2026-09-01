@@ -1,0 +1,486 @@
+--// LOCK BUTTON + PREDICTION GUI + JUMP PREDICTION + FOLLOW CAMERA
+--// LocalScript inside StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local RunService = game:GetService("RunService")
+
+local Camera = workspace.CurrentCamera
+
+--==================================================
+-- SETTINGS
+--==================================================
+
+local predictionTime = 0.15
+local jumpPredictionTime = 0.20
+
+local predictionStep = 0.05
+local minPrediction = 0
+local maxPrediction = 1
+
+local lockAreaSize = Vector2.new(400, 400)
+
+--==================================================
+-- MAIN GUI
+--==================================================
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LockButtonGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+--==================================================
+-- LOCK BUTTON
+--==================================================
+
+local Button = Instance.new("TextButton")
+Button.Name = "LockButton"
+Button.Size = UDim2.new(0, 150, 0, 50)
+Button.Position = UDim2.new(0.45, 0, 0.8, 0)
+Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button.Font = Enum.Font.GothamBold
+Button.TextSize = 18
+Button.Text = "Lock Target"
+Button.Active = true
+Button.Draggable = true
+Button.Parent = ScreenGui
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0.5, 0)
+ButtonCorner.Parent = Button
+
+--==================================================
+-- PREDICTION FRAME
+--==================================================
+
+local PredictionFrame = Instance.new("Frame")
+PredictionFrame.Name = "PredictionFrame"
+PredictionFrame.Size = UDim2.new(0, 190, 0, 155)
+PredictionFrame.Position = UDim2.new(0, 20, 0.5, -75)
+PredictionFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+PredictionFrame.BackgroundTransparency = 0.05
+PredictionFrame.Active = true
+PredictionFrame.Draggable = true
+PredictionFrame.Parent = ScreenGui
+
+local FrameCorner = Instance.new("UICorner")
+FrameCorner.CornerRadius = UDim.new(0, 12)
+FrameCorner.Parent = PredictionFrame
+
+--==================================================
+-- TITLE
+--==================================================
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Position = UDim2.new(0, 0, 0, 5)
+Title.BackgroundTransparency = 1
+Title.Text = "Prediction"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.Parent = PredictionFrame
+
+--==================================================
+-- NORMAL PREDICTION LABEL
+--==================================================
+
+local PredictionLabel = Instance.new("TextLabel")
+PredictionLabel.Size = UDim2.new(0, 110, 0, 25)
+PredictionLabel.Position = UDim2.new(0, 10, 0, 42)
+PredictionLabel.BackgroundTransparency = 1
+PredictionLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+PredictionLabel.Font = Enum.Font.Gotham
+PredictionLabel.TextSize = 14
+PredictionLabel.TextXAlignment = Enum.TextXAlignment.Left
+PredictionLabel.Parent = PredictionFrame
+
+--==================================================
+-- NORMAL PREDICTION -
+--==================================================
+
+local PredictionMinus = Instance.new("TextButton")
+PredictionMinus.Size = UDim2.new(0, 25, 0, 25)
+PredictionMinus.Position = UDim2.new(0, 115, 0, 42)
+PredictionMinus.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+PredictionMinus.Text = "-"
+PredictionMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
+PredictionMinus.Font = Enum.Font.GothamBold
+PredictionMinus.TextSize = 18
+PredictionMinus.Parent = PredictionFrame
+
+local PredictionMinusCorner = Instance.new("UICorner")
+PredictionMinusCorner.CornerRadius = UDim.new(0, 6)
+PredictionMinusCorner.Parent = PredictionMinus
+
+--==================================================
+-- NORMAL PREDICTION +
+--==================================================
+
+local PredictionPlus = Instance.new("TextButton")
+PredictionPlus.Size = UDim2.new(0, 25, 0, 25)
+PredictionPlus.Position = UDim2.new(0, 150, 0, 42)
+PredictionPlus.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+PredictionPlus.Text = "+"
+PredictionPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
+PredictionPlus.Font = Enum.Font.GothamBold
+PredictionPlus.TextSize = 18
+PredictionPlus.Parent = PredictionFrame
+
+local PredictionPlusCorner = Instance.new("UICorner")
+PredictionPlusCorner.CornerRadius = UDim.new(0, 6)
+PredictionPlusCorner.Parent = PredictionPlus
+
+--==================================================
+-- JUMP PREDICTION LABEL
+--==================================================
+
+local JumpLabel = Instance.new("TextLabel")
+JumpLabel.Size = UDim2.new(0, 110, 0, 25)
+JumpLabel.Position = UDim2.new(0, 10, 0, 82)
+JumpLabel.BackgroundTransparency = 1
+JumpLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+JumpLabel.Font = Enum.Font.Gotham
+JumpLabel.TextSize = 14
+JumpLabel.TextXAlignment = Enum.TextXAlignment.Left
+JumpLabel.Parent = PredictionFrame
+
+--==================================================
+-- JUMP PREDICTION -
+--==================================================
+
+local JumpMinus = Instance.new("TextButton")
+JumpMinus.Size = UDim2.new(0, 25, 0, 25)
+JumpMinus.Position = UDim2.new(0, 115, 0, 82)
+JumpMinus.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+JumpMinus.Text = "-"
+JumpMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
+JumpMinus.Font = Enum.Font.GothamBold
+JumpMinus.TextSize = 18
+JumpMinus.Parent = PredictionFrame
+
+local JumpMinusCorner = Instance.new("UICorner")
+JumpMinusCorner.CornerRadius = UDim.new(0, 6)
+JumpMinusCorner.Parent = JumpMinus
+
+--==================================================
+-- JUMP PREDICTION +
+--==================================================
+
+local JumpPlus = Instance.new("TextButton")
+JumpPlus.Size = UDim2.new(0, 25, 0, 25)
+JumpPlus.Position = UDim2.new(0, 150, 0, 82)
+JumpPlus.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+JumpPlus.Text = "+"
+JumpPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
+JumpPlus.Font = Enum.Font.GothamBold
+JumpPlus.TextSize = 18
+JumpPlus.Parent = PredictionFrame
+
+local JumpPlusCorner = Instance.new("UICorner")
+JumpPlusCorner.CornerRadius = UDim.new(0, 6)
+JumpPlusCorner.Parent = JumpPlus
+
+--==================================================
+-- UPDATE LABELS
+--==================================================
+
+local function updateLabels()
+
+    PredictionLabel.Text =
+        "Move: " .. string.format("%.2f", predictionTime)
+
+    JumpLabel.Text =
+        "Jump: " .. string.format("%.2f", jumpPredictionTime)
+
+end
+
+updateLabels()
+
+--==================================================
+-- PREDICTION CONTROLS
+--==================================================
+
+PredictionMinus.MouseButton1Click:Connect(function()
+
+    predictionTime = math.clamp(
+        predictionTime - predictionStep,
+        minPrediction,
+        maxPrediction
+    )
+
+    updateLabels()
+
+end)
+
+PredictionPlus.MouseButton1Click:Connect(function()
+
+    predictionTime = math.clamp(
+        predictionTime + predictionStep,
+        minPrediction,
+        maxPrediction
+    )
+
+    updateLabels()
+
+end)
+
+JumpMinus.MouseButton1Click:Connect(function()
+
+    jumpPredictionTime = math.clamp(
+        jumpPredictionTime - predictionStep,
+        minPrediction,
+        maxPrediction
+    )
+
+    updateLabels()
+
+end)
+
+JumpPlus.MouseButton1Click:Connect(function()
+
+    jumpPredictionTime = math.clamp(
+        jumpPredictionTime + predictionStep,
+        minPrediction,
+        maxPrediction
+    )
+
+    updateLabels()
+
+end)
+
+--==================================================
+-- MINI / MAXIMIZE BUTTON
+--==================================================
+
+local MiniButton = Instance.new("TextButton")
+MiniButton.Name = "PredictionMiniButton"
+MiniButton.Size = UDim2.new(0, 35, 0, 35)
+MiniButton.Position = UDim2.new(0, 20, 0.5, -110)
+MiniButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MiniButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MiniButton.Font = Enum.Font.GothamBold
+MiniButton.TextSize = 18
+MiniButton.Text = "−"
+MiniButton.Active = true
+MiniButton.Draggable = true
+MiniButton.Parent = ScreenGui
+
+local MiniCorner = Instance.new("UICorner")
+MiniCorner.CornerRadius = UDim.new(0.5, 0)
+MiniCorner.Parent = MiniButton
+
+local predictionGuiOpen = true
+
+MiniButton.MouseButton1Click:Connect(function()
+
+    predictionGuiOpen = not predictionGuiOpen
+
+    PredictionFrame.Visible = predictionGuiOpen
+
+    if predictionGuiOpen then
+        MiniButton.Text = "−"
+    else
+        MiniButton.Text = "+"
+    end
+
+end)
+
+--==================================================
+-- LOCK VARIABLES
+--==================================================
+
+local lockedPlayer = nil
+local lockEnabled = false
+
+--==================================================
+-- FIND TARGET IN CENTER
+--==================================================
+
+local function getPlayerInCenterArea()
+
+    local center = Vector2.new(
+        Camera.ViewportSize.X / 2,
+        Camera.ViewportSize.Y / 2
+    )
+
+    local closestPlayer = nil
+    local closestDistance = math.huge
+
+    for _, player in ipairs(Players:GetPlayers()) do
+
+        if player ~= LocalPlayer
+            and player.Character
+            and player.Character:FindFirstChild("HumanoidRootPart") then
+
+            local root = player.Character.HumanoidRootPart
+
+            local screenPos, onScreen =
+                Camera:WorldToViewportPoint(root.Position)
+
+            if onScreen then
+
+                local offset =
+                    Vector2.new(screenPos.X, screenPos.Y) - center
+
+                if math.abs(offset.X) <= lockAreaSize.X / 2
+                    and math.abs(offset.Y) <= lockAreaSize.Y / 2 then
+
+                    local distance = offset.Magnitude
+
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestPlayer = player
+                    end
+
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+--==================================================
+-- OWNER TEXT
+--==================================================
+
+local ownerTextShown = false
+
+local function showOwnerTextOnce()
+
+    if ownerTextShown then
+        return
+    end
+
+    ownerTextShown = true
+
+    local ownerLabel = Instance.new("TextLabel")
+
+    ownerLabel.Size = UDim2.new(1, 0, 0, 50)
+    ownerLabel.Position = UDim2.new(0, 0, 0.05, 0)
+    ownerLabel.BackgroundTransparency = 1
+    ownerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ownerLabel.Font = Enum.Font.GothamBold
+    ownerLabel.TextScaled = true
+    ownerLabel.Text = "owner: movix"
+    ownerLabel.Parent = ScreenGui
+
+    task.delay(4, function()
+
+        if ownerLabel then
+            ownerLabel:Destroy()
+        end
+
+    end)
+
+end
+
+--==================================================
+-- LOCK / UNLOCK
+--==================================================
+
+Button.MouseButton1Click:Connect(function()
+
+    if lockEnabled then
+
+        lockEnabled = false
+        lockedPlayer = nil
+        Button.Text = "Lock Target"
+
+        return
+    end
+
+    local target = getPlayerInCenterArea()
+
+    if target then
+
+        lockedPlayer = target
+        lockEnabled = true
+
+        Button.Text = "Locked: " .. target.Name
+
+        showOwnerTextOnce()
+
+    else
+
+        Button.Text = "No Player in Center Area"
+
+    end
+
+end)
+
+--==================================================
+-- CAMERA FOLLOW + PREDICTION
+--==================================================
+
+RunService.RenderStepped:Connect(function()
+
+    if not lockEnabled then
+        return
+    end
+
+    if not lockedPlayer then
+        return
+    end
+
+    if not lockedPlayer.Character then
+        return
+    end
+
+    local root =
+        lockedPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+    local humanoid =
+        lockedPlayer.Character:FindFirstChildOfClass("Humanoid")
+
+    if not root or not humanoid then
+        return
+    end
+
+    local velocity = root.AssemblyLinearVelocity
+
+    -- Y eksenini normal prediction'dan çıkarıyoruz
+    local horizontalVelocity = Vector3.new(
+        velocity.X,
+        0,
+        velocity.Z
+    )
+
+    local isJumping =
+        humanoid:GetState() == Enum.HumanoidStateType.Jumping
+        or humanoid:GetState() == Enum.HumanoidStateType.Freefall
+
+    local predictedPosition = root.Position
+
+    -- SADECE HAREKET EDERKEN MOVE PREDICTION
+    if horizontalVelocity.Magnitude > 0.5 then
+
+        predictedPosition =
+            root.Position +
+            horizontalVelocity * predictionTime
+
+    end
+
+    -- ZIPLARKEN AYRI JUMP PREDICTION
+    if isJumping then
+
+        predictedPosition =
+            predictedPosition +
+            Vector3.new(
+                0,
+                velocity.Y * jumpPredictionTime,
+                0
+            )
+
+    end
+
+    -- FOLLOW CAMERA
+    Camera.CFrame = CFrame.lookAt(
+        Camera.CFrame.Position,
+        predictedPosition
+    )
+
+end)
